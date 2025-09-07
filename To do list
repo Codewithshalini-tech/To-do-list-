@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple To-Do List</title>
+  <style>
+    :root{
+      --bg: #0f1724;
+      --card: #0b1220;
+      --muted: #9aa4b2;
+      --text: #e6eef8;
+      --accent: #6ee7b7;
+      --danger: #ff7a7a;
+      --glass: rgba(255,255,255,0.03);
+      --radius: 12px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;color:var(--text);background:linear-gradient(180deg,#071124 0%, #0d1b2b 100%);-webkit-font-smoothing:antialiased}
+    .wrap{max-width:940px;margin:32px auto;padding:24px;background:linear-gradient(180deg,rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--radius);box-shadow:0 8px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03);}
+    header{display:flex;align-items:center;gap:16px}
+    header h1{margin:0;font-size:1.25rem;letter-spacing:0.2px}
+    .sub{color:var(--muted);font-size:0.9rem}
+    .controls{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap}
+    .new-task{display:flex;gap:8px;flex:1;min-width:240px}
+    input[type="text"], input[type="date"], select{padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid rgba(255,255,255,0.03);color:var(--text);outline:none}
+    input[type="text"]::placeholder{color:var(--muted)}
+    button.btn{background:linear-gradient(180deg,#134e4a,#0f3b36);color:white;padding:10px 14px;border-radius:10px;border:0;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px 10px;border-radius:8px;color:var(--text);cursor:pointer}
+    .flex{display:flex;align-items:center;gap:12px}
+    .filters{display:flex;gap:8px;align-items:center}
+    .filters button{padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--muted);cursor:pointer}
+    .filters button.active{background:var(--accent);color:#07302a;border:0}
+    .topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px;margin-top:12px}
+    .list{margin-top:18px}
+    .task{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:12px;background:var(--glass);border:1px solid rgba(255,255,255,0.02);margin-bottom:10px}
+    .task.dragging{opacity:0.6;transform:scale(0.995)}
+    .task .meta{display:flex;flex-direction:column;gap:6px}
+    .task-title{font-weight:600}
+    .task-sub{font-size:0.88rem;color:var(--muted)}
+    .checkbox{width:20px;height:20px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);display:grid;place-items:center;cursor:pointer}
+    .checkbox.checked{background:linear-gradient(180deg,#2dd4bf,#0ea5a0);border:0}
+    .small{font-size:0.85rem;color:var(--muted);}
+    .priority{padding:6px 8px;border-radius:8px;font-weight:600;font-size:0.78rem}
+    .priority.low{background:rgba(110,231,183,0.12);color:var(--accent)}
+    .priority.medium{background:rgba(255,193,7,0.09);color:#ffd166}
+    .priority.high{background:rgba(255,122,122,0.12);color:var(--danger)}
+    .actions{display:flex;gap:8px}
+    .icon-btn{background:transparent;border:0;color:var(--muted);cursor:pointer;padding:8px;border-radius:8px}
+    .icon-btn:hover{background:rgba(255,255,255,0.02);color:var(--text)}
+    .empty{padding:40px;border-radius:12px;text-align:center;color:var(--muted);border:1px dashed rgba(255,255,255,0.03);margin-top:16px}
+    .search-input{min-width:200px;padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid rgba(255,255,255,0.02);color:var(--text)}
+    footer{margin-top:18px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:0.9rem;gap:12px;flex-wrap:wrap}
+    @media (max-width:720px){.controls{flex-direction:column}.new-task{width:100%}.topbar{flex-direction:column;align-items:stretch;gap:12px}}
+    /* small helper focus */
+    button:focus,input:focus,select:focus{outline:4px solid rgba(110,231,183,0.08)}
+    /* edit input styling */
+    .edit-input{width:100%;padding:8px 10px;border-radius:8px;background:transparent;border:1px dashed rgba(255,255,255,0.05);color:var(--text)}
+  </style>
+</head>
+<body>
+  <main class="wrap" role="main" aria-labelledby="title">
+    <header>
+      <div>
+        <h1 id="title">✅ My To-Do List</h1>
+        <div class="sub">Simple, fast & offline — tasks saved in your browser</div>
+      </div>
+    </header>
+
+    <section class="controls" aria-label="Controls">
+      <div class="new-task" role="group" aria-label="Add task">
+        <input id="taskText" type="text" placeholder="Nayi task likho aur Enter dabao — e.g., 'Finish project report'" />
+        <select id="priority" title="Priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+        <input id="dueDate" type="date" aria-label="Due date" />
+        <button id="addBtn" class="btn" title="Add task">Add</button>
+      </div>
+
+      <div class="flex">
+        <input id="search" class="search-input" type="text" placeholder="Search tasks..." aria-label="Search tasks" />
+        <div class="filters" role="tablist" aria-label="Filter tasks">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="active">Active</button>
+          <button class="filter-btn" data-filter="completed">Completed</button>
+        </div>
+        <button id="clearCompleted" class="ghost" title="Clear completed tasks">Clear completed</button>
+      </div>
+    </section>
+
+    <div class="topbar">
+      <div class="small" id="stats">0 tasks</div>
+      <div class="small">Drag & drop to reorder • Double-click title to edit</div>
+    </div>
+
+    <section id="list" class="list" aria-live="polite" aria-label="Task list"></section>
+
+    <div id="empty" class="empty hidden">No tasks yet — add one above ✨</div>
+
+    <footer>
+      <div>Saved locally — <span id="lastSaved">never</span></div>
+      <div>
+        <button id="exportBtn" class="ghost">Export JSON</button>
+        <button id="importBtn" class="ghost">Import JSON</button>
+        <input id="importFile" type="file" accept="application/json" style="display:none" />
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    // --- Data model & persistence ------------------------------------------
+    const LS = 'todo-v1';
+    let tasks = JSON.parse(localStorage.getItem(LS) || 'null') || [];
+
+    // --- Elements ----------------------------------------------------------
+    const $taskText = document.getElementById('taskText');
+    const $addBtn = document.getElementById('addBtn');
+    const $priority = document.getElementById('priority');
+    const $dueDate = document.getElementById('dueDate');
+    const $list = document.getElementById('list');
+    const $stats = document.getElementById('stats');
+    const $filters = document.querySelectorAll('.filter-btn');
+    const $search = document.getElementById('search');
+    const $clearCompleted = document.getElementById('clearCompleted');
+    const $empty = document.getElementById('empty');
+    const $lastSaved = document.getElementById('lastSaved');
+    const $exportBtn = document.getElementById('exportBtn');
+    const $importBtn = document.getElementById('importBtn');
+    const $importFile = document.getElementById('importFile');
+
+    let filter = 'all';
+    let dragSrcId = null;
+
+    // --- Utilities ---------------------------------------------------------
+    function save(){
+      localStorage.setItem(LS, JSON.stringify(tasks));
+      $lastSaved.textContent = new Date().toLocaleString();
+    }
+    function uid(){ return 't'+Math.random().toString(36).slice(2,9) }
+    function formatDate(d){
+      if(!d) return '';
+      const dt = new Date(d);
+      if(isNaN(dt)) return '';
+      return dt.toLocaleDateString();
+    }
+
+    // --- Rendering ---------------------------------------------------------
+    function render(){
+      const q = $search.value.trim().toLowerCase();
+      const filtered = tasks
+        .filter(t => filter === 'all' || (filter === 'active' && !t.done) || (filter === 'completed' && t.done))
+        .filter(t => !q || t.text.toLowerCase().includes(q) || (t.note && t.note.toLowerCase().includes(q)));
+
+      $list.innerHTML = '';
+      if(filtered.length === 0){
+        $empty.classList.remove('hidden');
+      } else {
+        $empty.classList.add('hidden');
+      }
+
+      filtered.forEach(task => {
+        const el = document.createElement('div');
+        el.className = 'task';
+        el.draggable = true;
+        el.dataset.id = task.id;
+        if(task.dragging) el.classList.add('dragging');
+
+        // checkbox
+        const cb = document.createElement('div');
+        cb.className = 'checkbox' + (task.done ? ' checked' : '');
+        cb.tabIndex = 0;
+        cb.setAttribute('role','checkbox');
+        cb.setAttribute('aria-checked', String(!!task.done));
+        cb.title = task.done ? 'Mark as not done' : 'Mark as done';
+        cb.addEventListener('click', () => { toggleDone(task.id) });
+        cb.addEventListener('keydown', (e) => { if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); toggleDone(task.id); }});
+        el.appendChild(cb);
+
+        // meta
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+
+        // title (editable)
+        const title = document.createElement('div');
+        title.className = 'task-title';
+        title.textContent = task.text;
+        if(task.done) title.style.textDecoration = 'line-through';
+        title.tabIndex = 0;
+        title.title = 'Double click to edit';
+        title.addEventListener('dblclick', () => editTask(task.id));
+        title.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); editTask(task.id); }});
+        meta.appendChild(title);
+
+        // subtitle
+        const sub = document.createElement('div');
+        sub.className = 'task-sub';
+        sub.innerHTML = `
+          <span class="small">${task.note ? escapeHtml(task.note) + ' • ' : ''}${task.due ? 'Due: ' + formatDate(task.due) + ' • ' : ''}</span>
+          <span class="priority ${task.priority}">${capitalize(task.priority)}</span>
+        `;
+        meta.appendChild(sub);
+
+        el.appendChild(meta);
+
+        // actions
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        // edit
+        const bEdit = document.createElement('button');
+        bEdit.className = 'icon-btn';
+        bEdit.title = 'Edit';
+        bEdit.innerHTML = '✏️';
+        bEdit.addEventListener('click', () => editTask(task.id));
+        actions.appendChild(bEdit);
+
+        // delete
+        const bDel = document.createElement('button');
+        bDel.className = 'icon-btn';
+        bDel.title = 'Delete';
+        bDel.innerHTML = '🗑️';
+        bDel.addEventListener('click', () => { if(confirm('Delete this task?')){ deleteTask(task.id) }});
+        actions.appendChild(bDel);
+
+        el.appendChild(actions);
+
+        // drag events
+        el.addEventListener('dragstart', (e) => {
+          dragSrcId = task.id;
+          e.dataTransfer.effectAllowed = 'move';
+          el.classList.add('dragging');
+        });
+        el.addEventListener('dragend', (e) => {
+          dragSrcId = null;
+          el.classList.remove('dragging');
+        });
+
+        el.addEventListener('dragover', (e) => {
+          e.preventDefault();
+        });
+
+        el.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const destId = task.id;
+          if(dragSrcId && dragSrcId !== destId){
+            reorder(dragSrcId, destId);
+          }
+        });
+
+        $list.appendChild(el);
+      });
+
+      $stats.textContent = `${tasks.length} task(s) • ${tasks.filter(t=>t.done).length} completed`;
+    }
+
+    // --- CRUD operations ---------------------------------------------------
+    function addTask(text, priorityVal='medium', due=''){
+      if(!text || !text.trim()) return;
+      const t = { id: uid(), text: text.trim(), note:'', priority: priorityVal, due: due || '', done:false, created: Date.now() };
+      tasks.unshift(t);
+      save(); render(); $taskText.value=''; $dueDate.value=''; $priority.value='medium';
+    }
+
+    function deleteTask(id){
+      tasks = tasks.filter(t => t.id !== id);
+      save(); render();
+    }
+
+    function toggleDone(id){
+      const t = tasks.find(x => x.id === id);
+      if(!t) return;
+      t.done = !t.done;
+      save(); render();
+    }
+
+    function editTask(id){
+      const t = tasks.find(x => x.id === id);
+      if(!t) return;
+      // show inline editor modal (simple prompt fallback)
+      const newText = prompt('Edit task text', t.text);
+      if(newText === null) return; // cancelled
+      t.text = newText.trim() || t.text;
+      // optionally edit priority/due via prompts (small UX but functional)
+      const newPriority = prompt('Priority (low, medium, high)', t.priority) || t.priority;
+      if(['low','medium','high'].includes(newPriority)) t.priority = newPriority;
+      const newDue = prompt('Due date (YYYY-MM-DD) — leave blank to clear', t.due || '') ;
+      t.due = newDue ? newDue : '';
+      save(); render();
+    }
+
+    function reorder(srcId, destId){
+      const srcIdx = tasks.findIndex(t => t.id === srcId);
+      const destIdx = tasks.findIndex(t => t.id === destId);
+      if(srcIdx === -1 || destIdx === -1) return;
+      const [item] = tasks.splice(srcIdx, 1);
+      tasks.splice(destIdx, 0, item);
+      save(); render();
+    }
+
+    function clearCompleted(){
+      if(!confirm('Remove all completed tasks?')) return;
+      tasks = tasks.filter(t => !t.done);
+      save(); render();
+    }
+
+    // --- Helpers -----------------------------------------------------------
+    function escapeHtml(s){ return s.replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])) }
+    function capitalize(s){ return s ? s[0].toUpperCase()+s.slice(1) : '' }
+
+    // --- Events ------------------------------------------------------------
+    $addBtn.addEventListener('click', ()=> addTask($taskText.value, $priority.value, $dueDate.value));
+    $taskText.addEventListener('keydown', (e)=> { if(e.key === 'Enter'){ addTask($taskText.value, $priority.value, $dueDate.value) }});
+    $clearCompleted.addEventListener('click', clearCompleted);
+
+    $filters.forEach(btn => {
+      btn.addEventListener('click', (e)=> {
+        $filters.forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        filter = btn.dataset.filter;
+        render();
+      })
+    });
+
+    $search.addEventListener('input', () => render());
+
+    // export/import
+    $exportBtn.addEventListener('click', () => {
+      const data = JSON.stringify(tasks, null, 2);
+      const blob = new Blob([data], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'todo-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    $importBtn.addEventListener('click', ()=> $importFile.click());
+    $importFile.addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const imported = JSON.parse(ev.target.result);
+          if(!Array.isArray(imported)) throw new Error('Invalid file');
+          // merge but avoid id collisions
+          imported.forEach(it => {
+            if(!it.id) it.id = uid();
+            tasks.push(it);
+          });
+          save(); render();
+          alert('Import complete');
+        } catch(err){
+          alert('Failed to import: ' + err.message);
+        }
+      };
+      reader.readAsText(f);
+      e.target.value = '';
+    });
+
+    // keyboard: '/' to focus input
+    window.addEventListener('keydown', (e) => {
+      if(e.key === '/' && document.activeElement !== $taskText && document.activeElement !== $search){
+        e.preventDefault();
+        $taskText.focus();
+      }
+    });
+
+    // initial demo tasks if empty
+    if(tasks.length === 0){
+      tasks = [
+        {id: uid(), text:'Finish project README', note:'Add screenshots and setup steps', priority:'medium', due:'', done:false, created: Date.now()},
+        {id: uid(), text:'Study JS promises', note:'Watch tutorial & practice', priority:'low', due:'', done:false, created: Date.now()},
+        {id: uid(), text:'Buy groceries', note:'Milk, Eggs, Spinach', priority:'high', due:'', done:true, created: Date.now()}
+      ];
+      save();
+    }
+
+    // initial render
+    render();
+  </script>
+</body>
+</html>
